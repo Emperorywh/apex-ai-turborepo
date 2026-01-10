@@ -5,6 +5,7 @@ import ReactMarkdown from "react-markdown";
 import remarkGfm from "remark-gfm";
 import { Prism as SyntaxHighlighter } from "react-syntax-highlighter";
 import { vscDarkPlus } from "react-syntax-highlighter/dist/esm/styles/prism";
+import { Button } from "@repo/ui";
 
 interface Message {
 	id: string;
@@ -230,7 +231,7 @@ export default function Home() {
 					onClick={() => setSidebarOpen(false)}
 				/>
 			)}
-
+			<Button>按钮11111111111111</Button>
 			{/* Sidebar */}
 			<div
 				className={`
