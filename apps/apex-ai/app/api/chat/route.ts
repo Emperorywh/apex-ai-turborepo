@@ -51,7 +51,11 @@ export async function POST(request: Request) {
 			stream: false,
 		});
 
-		const responseMessage = response.choices[0].message;
+		const choice = response.choices[0];
+		if (!choice) {
+			return NextResponse.json({ error: "No response from AI" }, { status: 500 });
+		}
+		const responseMessage = choice.message;
 
 		// Handle DeepSeek's specific DSML format if standard tool_calls are missing
 		let toolCalls = responseMessage.tool_calls;
@@ -63,7 +67,7 @@ export async function POST(request: Request) {
 			const functionNameMatch = content.match(/<｜DSML｜invoke\s+name="([^"]+)"\s*>/);
 			const cityMatch = content.match(/<｜DSML｜parameter\s+name="city"\s+string="true"\s*>([^<]+)<\/｜DSML｜parameter>/);
 			
-			if (functionNameMatch && cityMatch) {
+			if (functionNameMatch && cityMatch && functionNameMatch[1] && cityMatch[1]) {
 				isDsml = true;
 				// Clean up city name (remove whitespace)
 				const city = cityMatch[1].trim();
