@@ -23,6 +23,15 @@ export async function POST(req: Request) {
 		const { messages } = await req.json();
 		const chatMessages: ChatCompletionMessageParam[] = messages;
 
+		// Add system message to guide tool usage
+		const systemMessage: ChatCompletionMessageParam = {
+			role: "system",
+			content: "You are a helpful assistant. You have access to tools. When you need to check inventory for multiple products, please use the `check_inventory` tool which accepts a list of product IDs. Similarly, when you need to query data for multiple customers, use the `query_customer_data` tool which accepts a list of customer IDs."
+		};
+		if (chatMessages.length === 0 || chatMessages[0]?.role !== "system") {
+			chatMessages.unshift(systemMessage);
+		}
+
 		// 1. Initialize MCP Client
 		const mcpServerUrl = "http://localhost:3001/mcp";
 
@@ -139,6 +148,8 @@ export async function POST(req: Request) {
 								content: content,
 							});
 						}
+
+						console.log("chatMessages", chatMessages)
 
 						// 5. Final Call to LLM
 						const finalStream = await openai.chat.completions.create({

@@ -1,11 +1,11 @@
 import { z } from "zod";
 
 export const QueryCustomerSchema = z.object({
-	customerId: z.string().describe("The ID of the customer to query"),
+	customerIds: z.array(z.string()).describe("The list of customer IDs to query"),
 });
 
 export const CheckInventorySchema = z.object({
-	productId: z.string().describe("The ID of the product to check"),
+	productIds: z.array(z.string()).describe("The list of product IDs to check"),
 });
 
 export const CreateOrderSchema = z.object({
@@ -27,34 +27,32 @@ const INVENTORY: Record<string, number> = {
 
 export const toolsHandler = {
 	query_customer_data: async (args: z.infer<typeof QueryCustomerSchema>) => {
-		const { customerId } = args;
-		const customer = CUSTOMERS[customerId];
-
-		if (!customer) {
-			return {
-				content: [{ type: "text" as const, text: `Customer ${customerId} not found.` }],
-				isError: true,
-			};
-		}
+		const { customerIds } = args;
+		const results = customerIds.map((customerId) => {
+			const customer = CUSTOMERS[customerId];
+			if (!customer) {
+				return `Customer ${customerId} not found.`;
+			}
+			return JSON.stringify(customer, null, 2);
+		});
 
 		return {
-			content: [{ type: "text" as const, text: JSON.stringify(customer, null, 2) }],
+			content: [{ type: "text" as const, text: results.join("\n\n") }],
 		};
 	},
 
 	check_inventory: async (args: z.infer<typeof CheckInventorySchema>) => {
-		const { productId } = args;
-		const stock = INVENTORY[productId];
-
-		if (stock === undefined) {
-			return {
-				content: [{ type: "text" as const, text: `Product ${productId} not found.` }],
-				isError: true,
-			};
-		}
+		const { productIds } = args;
+		const results = productIds.map((productId) => {
+			const stock = INVENTORY[productId];
+			if (stock === undefined) {
+				return `Product ${productId} not found.`;
+			}
+			return `Current stock for ${productId}: ${stock}`;
+		});
 
 		return {
-			content: [{ type: "text" as const, text: `Current stock for ${productId}: ${stock}` }],
+			content: [{ type: "text" as const, text: results.join("\n") }],
 		};
 	},
 
