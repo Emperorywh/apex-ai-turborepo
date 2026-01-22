@@ -1,13 +1,10 @@
-import { ChatOpenAI } from "@langchain/openai";
+import { ChatDeepSeek } from "@langchain/deepseek";
 import { HumanMessage, AIMessage, SystemMessage } from "@langchain/core/messages";
 
-const model = new ChatOpenAI({
-    model: "deepseek-chat",
+const model = new ChatDeepSeek({
+    model: "deepseek-reasoner",
     apiKey: process.env.DEEPSEEK_API_KEY,
-    configuration: {
-        baseURL: "https://api.deepseek.com"
-    },
-    streaming: true,
+    temperature: 0,
 });
 
 export async function POST(req: Request) {
@@ -33,19 +30,44 @@ export async function POST(req: Request) {
                     // Use model.stream directly for chat completion
                     const eventStream = await model.stream(langchainMessages);
 
+                    let hasStartedThinking = false;
+                    let hasFinishedThinking = false;
+
                     for await (const chunk of eventStream) {
                         // chunk is an AIMessageChunk
-                        const token = chunk.content;
-                        if (token) {
-                            if (typeof token === "string") {
-                                controller.enqueue(encoder.encode(token));
+                        const content = chunk.content;
+                        const reasoning = chunk.additional_kwargs?.reasoning_content;
+
+                        if (reasoning) {
+                            if (!hasStartedThinking) {
+                                controller.enqueue(encoder.encode("<think>\n"));
+                                hasStartedThinking = true;
+                            }
+                            controller.enqueue(encoder.encode(reasoning as string));
+                        }
+
+                        // If we have content, and we were thinking, close it
+                        if (hasStartedThinking && !hasFinishedThinking && content) {
+                             controller.enqueue(encoder.encode("\n</think>\n"));
+                             hasFinishedThinking = true;
+                        }
+
+                        if (content) {
+                            if (typeof content === "string") {
+                                controller.enqueue(encoder.encode(content));
                             } else {
                                 // Handle complex content if necessary (e.g. multimodal)
                                 // For text generation, it's usually a string
-                                controller.enqueue(encoder.encode(JSON.stringify(token)));
+                                controller.enqueue(encoder.encode(JSON.stringify(content)));
                             }
                         }
                     }
+
+                    // Edge case: Finished stream but tag still open (e.g. only reasoning)
+                    if (hasStartedThinking && !hasFinishedThinking) {
+                        controller.enqueue(encoder.encode("\n</think>\n"));
+                    }
+
                     controller.close();
                 } catch (e) {
                     console.error("Streaming error:", e);

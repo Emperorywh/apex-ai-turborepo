@@ -381,31 +381,62 @@ export default function Home() {
 								</p>
 							</div>
 						) : (
-							currentConversation?.messages.map((msg) => {
-								const role = msg.id.includes("HumanMessage") ? "user" : "assistant";
-								return (
-									<div
-										key={msg.kwargs.id}
-										className={`flex gap-4 ${role === "user" ? "justify-end" : "justify-start"} animate-in fade-in slide-in-from-bottom-2 duration-300`}
-									>
-										{role === "assistant" && (
-											<div className="w-8 h-8 rounded-lg bg-white flex-shrink-0 flex items-center justify-center text-black font-bold text-xs mt-1 shadow-[0_0_10px_rgba(255,255,255,0.2)]">
-												A
-											</div>
-										)}
+								currentConversation?.messages.map((msg) => {
+									const role = msg.id.includes("HumanMessage") ? "user" : "assistant";
+									
+									let thoughtProcess = null;
+									let displayContent = msg.kwargs.content;
 
-										<div className={`
-										max-w-[85%] md:max-w-[75%] rounded-2xl px-5 py-3.5 text-[15px] leading-relaxed
-										${role === "user"
-												? "bg-neutral-800 text-white rounded-br-none border border-neutral-700"
-												: "bg-transparent text-neutral-200 px-0 md:px-0" // Minimalist style for AI
-											}
-									`}>
-											{role === "assistant" ? (
-												<div className="prose prose-invert max-w-none">
-													<ReactMarkdown
-														remarkPlugins={[remarkGfm]}
-														components={{
+									if (role === "assistant") {
+										const thinkMatch = /<think>([\s\S]*?)(?:<\/think>|$)/.exec(msg.kwargs.content);
+										if (thinkMatch) {
+											thoughtProcess = thinkMatch[1];
+											displayContent = msg.kwargs.content.replace(/<think>[\s\S]*?(?:<\/think>|$)/, "").trim();
+										}
+									}
+
+									return (
+										<div
+											key={msg.kwargs.id}
+											className={`flex gap-4 ${role === "user" ? "justify-end" : "justify-start"} animate-in fade-in slide-in-from-bottom-2 duration-300`}
+										>
+											{role === "assistant" && (
+												<div className="w-8 h-8 rounded-lg bg-white flex-shrink-0 flex items-center justify-center text-black font-bold text-xs mt-1 shadow-[0_0_10px_rgba(255,255,255,0.2)]">
+													A
+												</div>
+											)}
+
+											<div className={`
+											max-w-[85%] md:max-w-[75%] rounded-2xl px-5 py-3.5 text-[15px] leading-relaxed
+											${role === "user"
+													? "bg-neutral-800 text-white rounded-br-none border border-neutral-700"
+													: "bg-transparent text-neutral-200 px-0 md:px-0" // Minimalist style for AI
+												}
+										`}>
+												{role === "assistant" ? (
+													<div className="prose prose-invert max-w-none">
+														{thoughtProcess && (
+															<div className="mb-4">
+																<details className="group border-l-2 border-neutral-700 pl-4 ml-1" open>
+																	<summary className="text-xs font-mono text-neutral-500 cursor-pointer select-none hover:text-neutral-300 flex items-center gap-2 outline-none">
+																		<svg className="w-3 h-3 transition-transform group-open:rotate-90" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+																			<path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
+																		</svg>
+																		<span>Thinking Process</span>
+																	</summary>
+																	<div className="mt-2 text-sm text-neutral-400 font-mono whitespace-pre-wrap leading-relaxed bg-neutral-900/50 p-3 rounded-md border border-neutral-800">
+																		{thoughtProcess}
+																		{!msg.kwargs.content.includes("</think>") && (
+																			<span className="inline-block w-1.5 h-3 ml-1 bg-neutral-500 animate-pulse"/>
+																		)}
+																	</div>
+																</details>
+															</div>
+														)}
+														{displayContent && (
+															<ReactMarkdown
+																remarkPlugins={[remarkGfm]}
+																components={{
 															code({ node, inline, className, children, ...props }: any) {
 																const match = /language-(\w+)/.exec(className || "");
 																return !inline && match ? (
@@ -458,8 +489,9 @@ export default function Home() {
 															}
 														}}
 													>
-														{msg.kwargs.content}
+														{displayContent}
 													</ReactMarkdown>
+														)}
 												</div>
 											) : (
 												<p className="whitespace-pre-wrap">{msg.kwargs.content}</p>
