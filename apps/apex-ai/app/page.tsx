@@ -6,27 +6,16 @@ import remarkGfm from "remark-gfm";
 import { Prism as SyntaxHighlighter } from "react-syntax-highlighter";
 import { vscDarkPlus } from "react-syntax-highlighter/dist/esm/styles/prism";
 
-interface LangChainMessage {
-	lc: number;
-	type: "constructor";
-	id: string[];
-	kwargs: {
-		content: string;
-		id?: string;
-		tool_calls?: any[];
-		invalid_tool_calls?: any[];
-		additional_kwargs?: Record<string, any>;
-		response_metadata?: Record<string, any>;
-		type?: string;
-		name?: string;
-		usage_metadata?: any;
-	};
+interface Message {
+	id: string;
+	role: "user" | "assistant";
+	content: string;
 }
 
 interface Conversation {
 	id: string;
 	title: string;
-	messages: LangChainMessage[];
+	messages: Message[];
 	createdAt: Date;
 }
 
@@ -37,17 +26,9 @@ export default function Home() {
 			title: "欢迎对话",
 			messages: [
 				{
-					lc: 1,
-					type: "constructor",
-					id: ["langchain_core", "messages", "AIMessage"],
-					kwargs: {
-						content: "你好！我是 Apex AI。准备好探索未知的领域了吗？",
-						id: "welcome",
-						tool_calls: [],
-						invalid_tool_calls: [],
-						additional_kwargs: {},
-						response_metadata: {},
-					},
+					id: "welcome",
+					role: "assistant",
+					content: "你好！我是 Apex AI。准备好探索未知的领域了吗？",
 				},
 			],
 			createdAt: new Date(),
@@ -60,6 +41,7 @@ export default function Home() {
 	const [isMobile, setIsMobile] = useState(false);
 	const messagesEndRef = useRef<HTMLDivElement>(null);
 	const textareaRef = useRef<HTMLTextAreaElement>(null);
+	const abortControllerRef = useRef<AbortController | null>(null);
 
 	const currentConversation = conversations.find((c) => c.id === currentConversationId);
 
@@ -91,21 +73,21 @@ export default function Home() {
 		scrollToBottom();
 	}, [currentConversation?.messages]);
 
+	const handleStopGeneration = () => {
+		if (abortControllerRef.current) {
+			abortControllerRef.current.abort();
+			abortControllerRef.current = null;
+			setIsLoading(false);
+		}
+	};
+
 	const handleSendMessage = async () => {
 		if (!inputMessage.trim() || isLoading) return;
 
-		const newUserMessage: LangChainMessage = {
-			lc: 1,
-			type: "constructor",
-			id: ["langchain_core", "messages", "HumanMessage"],
-			kwargs: {
-				content: inputMessage,
-				id: Date.now().toString(),
-				tool_calls: [],
-				invalid_tool_calls: [],
-				additional_kwargs: {},
-				response_metadata: {},
-			},
+		const newUserMessage: Message = {
+			id: Date.now().toString(),
+			role: "user",
+			content: inputMessage,
 		};
 
 		const updatedConversations = conversations.map((conv) => {
@@ -123,6 +105,10 @@ export default function Home() {
 		setInputMessage("");
 		setIsLoading(true);
 
+		// Create new AbortController
+		const abortController = new AbortController();
+		abortControllerRef.current = abortController;
+
 		if (textareaRef.current) {
 			textareaRef.current.style.height = "auto";
 		}
@@ -132,8 +118,8 @@ export default function Home() {
 			const apiMessages = conversations
 				.find((c) => c.id === currentConversationId)
 				?.messages.map((m) => ({
-					role: m.id.includes("HumanMessage") ? "user" : "assistant",
-					content: m.kwargs.content,
+					role: m.role,
+					content: m.content,
 				})) || [];
 			apiMessages.push({ role: "user", content: inputMessage });
 
@@ -143,6 +129,7 @@ export default function Home() {
 					"Content-Type": "application/json",
 				},
 				body: JSON.stringify({ messages: apiMessages }),
+				signal: abortController.signal,
 			});
 
 			if (!response.ok) {
@@ -167,17 +154,9 @@ export default function Home() {
 							messages: [
 								...conv.messages,
 								{
-									lc: 1,
-									type: "constructor",
-									id: ["langchain_core", "messages", "AIMessage"],
-									kwargs: {
-										content: "",
-										id: assistantMessageId,
-										tool_calls: [],
-										invalid_tool_calls: [],
-										additional_kwargs: {},
-										response_metadata: {},
-									},
+									id: assistantMessageId,
+									role: "assistant",
+									content: "",
 								},
 							],
 						};
@@ -198,13 +177,10 @@ export default function Home() {
 						if (conv.id === currentConversationId) {
 							const messages = [...conv.messages];
 							const lastMessage = messages[messages.length - 1];
-							if (lastMessage && lastMessage.kwargs.id === assistantMessageId) {
+							if (lastMessage && lastMessage.id === assistantMessageId) {
 								messages[messages.length - 1] = {
 									...lastMessage,
-									kwargs: {
-										...lastMessage.kwargs,
-										content: assistantMessageContent,
-									},
+									content: assistantMessageContent,
 								};
 							}
 							return {
@@ -216,11 +192,16 @@ export default function Home() {
 					})
 				);
 			}
-		} catch (error) {
-			console.error("Error sending message:", error);
-			// Optionally add an error message to the chat
+		} catch (error: any) {
+			if (error.name === 'AbortError') {
+				console.log('Request aborted');
+			} else {
+				console.error("Error sending message:", error);
+				// Optionally add an error message to the chat
+			}
 		} finally {
 			setIsLoading(false);
+			abortControllerRef.current = null;
 		}
 	};
 
@@ -382,22 +363,22 @@ export default function Home() {
 							</div>
 						) : (
 								currentConversation?.messages.map((msg) => {
-									const role = msg.id.includes("HumanMessage") ? "user" : "assistant";
+									const role = msg.role;
 									
 									let thoughtProcess = null;
-									let displayContent = msg.kwargs.content;
+									let displayContent = msg.content;
 
 									if (role === "assistant") {
-										const thinkMatch = /<think>([\s\S]*?)(?:<\/think>|$)/.exec(msg.kwargs.content);
+										const thinkMatch = /<think>([\s\S]*?)(?:<\/think>|$)/.exec(msg.content);
 										if (thinkMatch) {
 											thoughtProcess = thinkMatch[1];
-											displayContent = msg.kwargs.content.replace(/<think>[\s\S]*?(?:<\/think>|$)/, "").trim();
+											displayContent = msg.content.replace(/<think>[\s\S]*?(?:<\/think>|$)/, "").trim();
 										}
 									}
 
 									return (
 										<div
-											key={msg.kwargs.id}
+											key={msg.id}
 											className={`flex gap-4 ${role === "user" ? "justify-end" : "justify-start"} animate-in fade-in slide-in-from-bottom-2 duration-300`}
 										>
 											{role === "assistant" && (
@@ -426,7 +407,7 @@ export default function Home() {
 																	</summary>
 																	<div className="mt-2 text-sm text-neutral-400 font-mono whitespace-pre-wrap leading-relaxed bg-neutral-900/50 p-3 rounded-md border border-neutral-800">
 																		{thoughtProcess}
-																		{!msg.kwargs.content.includes("</think>") && (
+																		{!msg.content.includes("</think>") && (
 																			<span className="inline-block w-1.5 h-3 ml-1 bg-neutral-500 animate-pulse"/>
 																		)}
 																	</div>
@@ -494,7 +475,7 @@ export default function Home() {
 														)}
 												</div>
 											) : (
-												<p className="whitespace-pre-wrap">{msg.kwargs.content}</p>
+												<p className="whitespace-pre-wrap">{msg.content}</p>
 											)}
 										</div>
 
@@ -539,18 +520,20 @@ export default function Home() {
 								rows={1}
 							/>
 							<button
-								onClick={handleSendMessage}
-								disabled={!inputMessage.trim() || isLoading}
+								onClick={isLoading ? handleStopGeneration : handleSendMessage}
+								disabled={!inputMessage.trim() && !isLoading}
 								className={`
 									p-2 rounded-lg flex items-center justify-center transition-all duration-200 flex-shrink-0
-									${inputMessage.trim() && !isLoading
+									${(inputMessage.trim() || isLoading)
 										? "bg-white text-black hover:bg-neutral-200"
 										: "bg-neutral-800 text-neutral-500 cursor-not-allowed"
 									}
 								`}
 							>
 								{isLoading ? (
-									<div className="w-4 h-4 border-2 border-neutral-500 border-t-transparent rounded-full animate-spin" />
+									<svg className="w-4 h-4" fill="currentColor" viewBox="0 0 24 24">
+										<rect x="6" y="6" width="12" height="12" rx="2" />
+									</svg>
 								) : (
 									<svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
 										<path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 12h14M12 5l7 7-7 7" />
