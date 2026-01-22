@@ -6,17 +6,27 @@ import remarkGfm from "remark-gfm";
 import { Prism as SyntaxHighlighter } from "react-syntax-highlighter";
 import { vscDarkPlus } from "react-syntax-highlighter/dist/esm/styles/prism";
 
-interface Message {
-	id: string;
-	role: "user" | "assistant";
-	content: string;
-	timestamp?: Date;
+interface LangChainMessage {
+	lc: number;
+	type: "constructor";
+	id: string[];
+	kwargs: {
+		content: string;
+		id?: string;
+		tool_calls?: any[];
+		invalid_tool_calls?: any[];
+		additional_kwargs?: Record<string, any>;
+		response_metadata?: Record<string, any>;
+		type?: string;
+		name?: string;
+		usage_metadata?: any;
+	};
 }
 
 interface Conversation {
 	id: string;
 	title: string;
-	messages: Message[];
+	messages: LangChainMessage[];
 	createdAt: Date;
 }
 
@@ -27,9 +37,17 @@ export default function Home() {
 			title: "欢迎对话",
 			messages: [
 				{
-					id: "welcome",
-					role: "assistant",
-					content: "你好！我是 Apex AI。准备好探索未知的领域了吗？",
+					lc: 1,
+					type: "constructor",
+					id: ["langchain_core", "messages", "AIMessage"],
+					kwargs: {
+						content: "你好！我是 Apex AI。准备好探索未知的领域了吗？",
+						id: "welcome",
+						tool_calls: [],
+						invalid_tool_calls: [],
+						additional_kwargs: {},
+						response_metadata: {},
+					},
 				},
 			],
 			createdAt: new Date(),
@@ -76,11 +94,18 @@ export default function Home() {
 	const handleSendMessage = async () => {
 		if (!inputMessage.trim() || isLoading) return;
 
-		const newUserMessage: Message = {
-			id: Date.now().toString(),
-			role: "user",
-			content: inputMessage,
-			timestamp: new Date(),
+		const newUserMessage: LangChainMessage = {
+			lc: 1,
+			type: "constructor",
+			id: ["langchain_core", "messages", "HumanMessage"],
+			kwargs: {
+				content: inputMessage,
+				id: Date.now().toString(),
+				tool_calls: [],
+				invalid_tool_calls: [],
+				additional_kwargs: {},
+				response_metadata: {},
+			},
 		};
 
 		const updatedConversations = conversations.map((conv) => {
@@ -107,12 +132,12 @@ export default function Home() {
 			const apiMessages = conversations
 				.find((c) => c.id === currentConversationId)
 				?.messages.map((m) => ({
-					role: m.role,
-					content: m.content,
+					role: m.id.includes("HumanMessage") ? "user" : "assistant",
+					content: m.kwargs.content,
 				})) || [];
 			apiMessages.push({ role: "user", content: inputMessage });
 
-			const response = await fetch("/api/chat", {
+			const response = await fetch("/api/langchain", {
 				method: "POST",
 				headers: {
 					"Content-Type": "application/json",
@@ -142,10 +167,17 @@ export default function Home() {
 							messages: [
 								...conv.messages,
 								{
-									id: assistantMessageId,
-									role: "assistant",
-									content: "",
-									timestamp: new Date(),
+									lc: 1,
+									type: "constructor",
+									id: ["langchain_core", "messages", "AIMessage"],
+									kwargs: {
+										content: "",
+										id: assistantMessageId,
+										tool_calls: [],
+										invalid_tool_calls: [],
+										additional_kwargs: {},
+										response_metadata: {},
+									},
 								},
 							],
 						};
@@ -166,8 +198,14 @@ export default function Home() {
 						if (conv.id === currentConversationId) {
 							const messages = [...conv.messages];
 							const lastMessage = messages[messages.length - 1];
-							if (lastMessage && lastMessage.id === assistantMessageId) {
-								lastMessage.content = assistantMessageContent;
+							if (lastMessage && lastMessage.kwargs.id === assistantMessageId) {
+								messages[messages.length - 1] = {
+									...lastMessage,
+									kwargs: {
+										...lastMessage.kwargs,
+										content: assistantMessageContent,
+									},
+								};
 							}
 							return {
 								...conv,
@@ -343,96 +381,99 @@ export default function Home() {
 								</p>
 							</div>
 						) : (
-							currentConversation?.messages.map((msg) => (
-								<div
-									key={msg.id}
-									className={`flex gap-4 ${msg.role === "user" ? "justify-end" : "justify-start"} animate-in fade-in slide-in-from-bottom-2 duration-300`}
-								>
-									{msg.role === "assistant" && (
-										<div className="w-8 h-8 rounded-lg bg-white flex-shrink-0 flex items-center justify-center text-black font-bold text-xs mt-1 shadow-[0_0_10px_rgba(255,255,255,0.2)]">
-											A
-										</div>
-									)}
-
-									<div className={`
-										max-w-[85%] md:max-w-[75%] rounded-2xl px-5 py-3.5 text-[15px] leading-relaxed
-										${msg.role === "user"
-											? "bg-neutral-800 text-white rounded-br-none border border-neutral-700"
-											: "bg-transparent text-neutral-200 px-0 md:px-0" // Minimalist style for AI
-										}
-									`}>
-										{msg.role === "assistant" ? (
-											<div className="prose prose-invert max-w-none">
-												<ReactMarkdown
-													remarkPlugins={[remarkGfm]}
-													components={{
-														code({ node, inline, className, children, ...props }: any) {
-															const match = /language-(\w+)/.exec(className || "");
-															return !inline && match ? (
-																<div className="rounded-lg overflow-hidden my-4 border border-neutral-800">
-																	<div className="bg-neutral-900 px-4 py-2 flex items-center justify-between border-b border-neutral-800">
-																		<span className="text-xs text-neutral-400 font-mono">{match[1]}</span>
-																	</div>
-																	<SyntaxHighlighter
-																		{...props}
-																		style={vscDarkPlus}
-																		language={match[1]}
-																		PreTag="div"
-																		customStyle={{ margin: 0, padding: '1rem', background: 'transparent' }}
-																	>
-																		{String(children).replace(/\n$/, "")}
-																	</SyntaxHighlighter>
-																</div>
-															) : (
-																<code {...props} className={`${className} bg-neutral-800/50 px-1.5 py-0.5 rounded text-sm font-mono text-blue-300`}>
-																	{children}
-																</code>
-															);
-														},
-														table({ children }) {
-															return (
-																<div className="overflow-x-auto my-4 border border-neutral-800 rounded-lg">
-																	<table className="min-w-full divide-y divide-neutral-800">
-																		{children}
-																	</table>
-																</div>
-															);
-														},
-														thead({ children }) {
-															return <thead className="bg-neutral-900">{children}</thead>;
-														},
-														th({ children }) {
-															return <th className="px-6 py-3 text-left text-xs font-medium text-neutral-400 uppercase tracking-wider">{children}</th>;
-														},
-														td({ children }) {
-															return <td className="px-6 py-4 whitespace-nowrap text-sm text-neutral-300 border-t border-neutral-800">{children}</td>;
-														},
-														a({ href, children }) {
-															return <a href={href} target="_blank" rel="noopener noreferrer" className="text-blue-400 hover:text-blue-300 hover:underline">{children}</a>;
-														},
-														ul({ children }) {
-															return <ul className="list-disc list-outside ml-4 space-y-1">{children}</ul>;
-														},
-														ol({ children }) {
-															return <ol className="list-decimal list-outside ml-4 space-y-1">{children}</ol>;
-														}
-													}}
-												>
-													{msg.content}
-												</ReactMarkdown>
+							currentConversation?.messages.map((msg) => {
+								const role = msg.id.includes("HumanMessage") ? "user" : "assistant";
+								return (
+									<div
+										key={msg.kwargs.id}
+										className={`flex gap-4 ${role === "user" ? "justify-end" : "justify-start"} animate-in fade-in slide-in-from-bottom-2 duration-300`}
+									>
+										{role === "assistant" && (
+											<div className="w-8 h-8 rounded-lg bg-white flex-shrink-0 flex items-center justify-center text-black font-bold text-xs mt-1 shadow-[0_0_10px_rgba(255,255,255,0.2)]">
+												A
 											</div>
-										) : (
-											<p className="whitespace-pre-wrap">{msg.content}</p>
+										)}
+
+										<div className={`
+										max-w-[85%] md:max-w-[75%] rounded-2xl px-5 py-3.5 text-[15px] leading-relaxed
+										${role === "user"
+												? "bg-neutral-800 text-white rounded-br-none border border-neutral-700"
+												: "bg-transparent text-neutral-200 px-0 md:px-0" // Minimalist style for AI
+											}
+									`}>
+											{role === "assistant" ? (
+												<div className="prose prose-invert max-w-none">
+													<ReactMarkdown
+														remarkPlugins={[remarkGfm]}
+														components={{
+															code({ node, inline, className, children, ...props }: any) {
+																const match = /language-(\w+)/.exec(className || "");
+																return !inline && match ? (
+																	<div className="rounded-lg overflow-hidden my-4 border border-neutral-800">
+																		<div className="bg-neutral-900 px-4 py-2 flex items-center justify-between border-b border-neutral-800">
+																			<span className="text-xs text-neutral-400 font-mono">{match[1]}</span>
+																		</div>
+																		<SyntaxHighlighter
+																			{...props}
+																			style={vscDarkPlus}
+																			language={match[1]}
+																			PreTag="div"
+																			customStyle={{ margin: 0, padding: '1rem', background: 'transparent' }}
+																		>
+																			{String(children).replace(/\n$/, "")}
+																		</SyntaxHighlighter>
+																	</div>
+																) : (
+																	<code {...props} className={`${className} bg-neutral-800/50 px-1.5 py-0.5 rounded text-sm font-mono text-blue-300`}>
+																		{children}
+																	</code>
+																);
+															},
+															table({ children }) {
+																return (
+																	<div className="overflow-x-auto my-4 border border-neutral-800 rounded-lg">
+																		<table className="min-w-full divide-y divide-neutral-800">
+																			{children}
+																		</table>
+																	</div>
+																);
+															},
+															thead({ children }) {
+																return <thead className="bg-neutral-900">{children}</thead>;
+															},
+															th({ children }) {
+																return <th className="px-6 py-3 text-left text-xs font-medium text-neutral-400 uppercase tracking-wider">{children}</th>;
+															},
+															td({ children }) {
+																return <td className="px-6 py-4 whitespace-nowrap text-sm text-neutral-300 border-t border-neutral-800">{children}</td>;
+															},
+															a({ href, children }) {
+																return <a href={href} target="_blank" rel="noopener noreferrer" className="text-blue-400 hover:text-blue-300 hover:underline">{children}</a>;
+															},
+															ul({ children }) {
+																return <ul className="list-disc list-outside ml-4 space-y-1">{children}</ul>;
+															},
+															ol({ children }) {
+																return <ol className="list-decimal list-outside ml-4 space-y-1">{children}</ol>;
+															}
+														}}
+													>
+														{msg.kwargs.content}
+													</ReactMarkdown>
+												</div>
+											) : (
+												<p className="whitespace-pre-wrap">{msg.kwargs.content}</p>
+											)}
+										</div>
+
+										{role === "user" && (
+											<div className="w-8 h-8 rounded-full bg-gradient-to-tr from-blue-600 to-cyan-500 flex-shrink-0 flex items-center justify-center text-xs font-bold mt-1">
+												U
+											</div>
 										)}
 									</div>
-
-									{msg.role === "user" && (
-										<div className="w-8 h-8 rounded-full bg-gradient-to-tr from-blue-600 to-cyan-500 flex-shrink-0 flex items-center justify-center text-xs font-bold mt-1">
-											U
-										</div>
-									)}
-								</div>
-							))
+								);
+							})
 						)}
 						{isLoading && (
 							<div className="flex gap-4 animate-pulse">

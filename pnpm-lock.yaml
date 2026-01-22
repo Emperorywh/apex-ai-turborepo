@@ -32,21 +32,18 @@ importers:
       '@langchain/core':
         specifier: ^1.1.12
         version: 1.1.12(openai@6.16.0(zod@3.25.76))
+      '@langchain/langgraph-sdk':
+        specifier: ^1.5.5
+        version: 1.5.5(@langchain/core@1.1.12(openai@6.16.0(zod@3.25.76)))(react-dom@19.2.3(react@19.2.3))(react@19.2.3)
       '@langchain/openai':
         specifier: ^1.2.1
         version: 1.2.1(@langchain/core@1.1.12(openai@6.16.0(zod@3.25.76)))
-      '@modelcontextprotocol/sdk':
-        specifier: ^1.0.1
-        version: 1.25.2(@cfworker/json-schema@4.1.1)(hono@4.11.3)(zod@3.25.76)
       '@repo/ui':
         specifier: workspace:*
         version: link:../../packages/ui
       '@types/react-syntax-highlighter':
         specifier: ^15.5.13
         version: 15.5.13
-      eventsource:
-        specifier: ^4.1.0
-        version: 4.1.0
       langchain:
         specifier: ^1.2.7
         version: 1.2.7(@langchain/core@1.1.12(openai@6.16.0(zod@3.25.76)))(openai@6.16.0(zod@3.25.76))(react-dom@19.2.3(react@19.2.3))(react@19.2.3)(zod-to-json-schema@3.25.1(zod@3.25.76))
@@ -836,10 +833,10 @@ packages:
     peerDependencies:
       '@langchain/core': ^1.0.1
 
-  '@langchain/langgraph-sdk@1.5.3':
-    resolution: {integrity: sha512-8ycRjOGsBafxvCpHyCGaWhd3s7UEXEYIEPO/vipebEzQuYaeF+E9MxS9uFSVaX1ZcNuqQNTosnBJG4ZUtirzuw==}
+  '@langchain/langgraph-sdk@1.5.5':
+    resolution: {integrity: sha512-SyiAs6TVXPWlt/8cI9pj/43nbIvclY3ytKqUFbL5MplCUnItetEyqvH87EncxyVF5D7iJKRZRfSVYBMmOZbjbQ==}
     peerDependencies:
-      '@langchain/core': ^1.0.1
+      '@langchain/core': ^1.1.15
       react: ^18 || ^19
       react-dom: ^18 || ^19
     peerDependenciesMeta:
@@ -1959,10 +1956,6 @@ packages:
   eventsource@3.0.7:
     resolution: {integrity: sha512-CRT1WTyuQoD771GW56XEZFQ/ZoSfWid1alKGDYMmkt2yl8UXrVR4pspqWNEcqKvVIzg6PAltWjxcSSPrboA4iA==}
     engines: {node: '>=18.0.0'}
-
-  eventsource@4.1.0:
-    resolution: {integrity: sha512-2GuF51iuHX6A9xdTccMTsNb7VO0lHZihApxhvQzJB5A03DvHDd2FQepodbMaztPBmBcE/ox7o2gqaxGhYB9LhQ==}
-    engines: {node: '>=20.0.0'}
 
   express-rate-limit@7.5.1:
     resolution: {integrity: sha512-7iN8iPMDzOMHPUYllBEsQdWVB6fPDMPqwjBaFrgr4Jgr/+okjvzAy+UHlYYL/Vs0OsOrMkwS6PJDkFlJwoxUnw==}
@@ -4091,7 +4084,7 @@ snapshots:
       '@langchain/core': 1.1.12(openai@6.16.0(zod@3.25.76))
       uuid: 10.0.0
 
-  '@langchain/langgraph-sdk@1.5.3(@langchain/core@1.1.12(openai@6.16.0(zod@3.25.76)))(react-dom@19.2.3(react@19.2.3))(react@19.2.3)':
+  '@langchain/langgraph-sdk@1.5.5(@langchain/core@1.1.12(openai@6.16.0(zod@3.25.76)))(react-dom@19.2.3(react@19.2.3))(react@19.2.3)':
     dependencies:
       p-queue: 9.1.0
       p-retry: 7.1.1
@@ -4105,7 +4098,7 @@ snapshots:
     dependencies:
       '@langchain/core': 1.1.12(openai@6.16.0(zod@3.25.76))
       '@langchain/langgraph-checkpoint': 1.0.0(@langchain/core@1.1.12(openai@6.16.0(zod@3.25.76)))
-      '@langchain/langgraph-sdk': 1.5.3(@langchain/core@1.1.12(openai@6.16.0(zod@3.25.76)))(react-dom@19.2.3(react@19.2.3))(react@19.2.3)
+      '@langchain/langgraph-sdk': 1.5.5(@langchain/core@1.1.12(openai@6.16.0(zod@3.25.76)))(react-dom@19.2.3(react@19.2.3))(react@19.2.3)
       uuid: 10.0.0
       zod: 3.25.76
     optionalDependencies:
@@ -5312,10 +5305,6 @@ snapshots:
   eventsource-parser@3.0.6: {}
 
   eventsource@3.0.7:
-    dependencies:
-      eventsource-parser: 3.0.6
-
-  eventsource@4.1.0:
     dependencies:
       eventsource-parser: 3.0.6
 
