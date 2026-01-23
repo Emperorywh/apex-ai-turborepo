@@ -87,13 +87,28 @@ export async function ingestHowToCook() {
 	}
 
 	const embeddings = new OpenAIEmbeddings({
-		modelName: "embedding-3",
+		model: "embedding-3", // Corrected property name from modelName to model
 		apiKey: process.env.BIGMODEL_API_KEY,
 		batchSize: 64,
 		configuration: {
 			baseURL: "https://open.bigmodel.cn/api/paas/v4",
 		},
 	});
+
+    // Reset logic: Delete existing collection if exists
+    try {
+        console.log(`Resetting collection: ${COLLECTION_NAME}`);
+        // We use a temporary Chroma client to delete the collection
+        // Note: Chroma.fromDocuments might not support delete directly easily without client instance.
+        // But since we are using the langchain wrapper, let's instantiate a client or use the static method if available?
+        // Actually, the easiest way is to use the raw chromadb client here to delete.
+        const { ChromaClient } = await import("chromadb");
+        const client = new ChromaClient({ path: "http://38.55.96.26:8000" });
+        await client.deleteCollection({ name: COLLECTION_NAME });
+        console.log("Collection deleted.");
+    } catch (e) {
+        console.log("Collection likely did not exist or delete failed, proceeding...", e);
+    }
 
 	const vectorStore = await Chroma.fromDocuments(splits, embeddings, {
 		collectionName: COLLECTION_NAME,
