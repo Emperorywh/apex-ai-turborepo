@@ -17,6 +17,7 @@
     "@langchain/openai": "^1.2.1",
     "@repo/ui": "workspace:*",
     "@types/react-syntax-highlighter": "^15.5.13",
+    "chromadb": "^3.2.2",
     "langchain": "^1.2.7",
     "next": "16.1.1",
     "openai": "^6.16.0",
