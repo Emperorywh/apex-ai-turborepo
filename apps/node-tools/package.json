@@ -18,6 +18,8 @@
     "chromadb": "^3.2.2",
     "dotenv": "^17.2.3",
     "express": "^4.21.2",
+    "fs-extra": "^11.3.3",
+    "glob": "^13.0.0",
     "langchain": "^1.2.7",
     "simple-git": "^3.30.0"
   },

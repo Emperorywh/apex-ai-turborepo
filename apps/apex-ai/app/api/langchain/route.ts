@@ -1,6 +1,55 @@
 import { ChatDeepSeek } from "@langchain/deepseek";
 import { HumanMessage, AIMessage, SystemMessage } from "@langchain/core/messages";
 import { chromaClient } from "@/lib/chroma";
+import { OpenAIEmbeddings } from "@langchain/openai";
+
+// Adapter for ChromaDB's IEmbeddingFunction interface
+class ZhipuEmbeddingFunction {
+    private apiKey: string;
+    private baseUrl: string;
+
+    constructor() {
+        this.apiKey = process.env.BIGMODEL_API_KEY || "";
+        this.baseUrl = "https://open.bigmodel.cn/api/paas/v4/embeddings";
+    }
+
+    async generate(texts: string[]): Promise<number[][]> {
+        if (!this.apiKey) {
+             console.error("❌ BIGMODEL_API_KEY is missing");
+             return [];
+        }
+        
+        try {
+            const response = await fetch(this.baseUrl, {
+                method: "POST",
+                headers: {
+                    "Content-Type": "application/json",
+                    "Authorization": `Bearer ${this.apiKey}`
+                },
+                body: JSON.stringify({
+                    model: "embedding-3",
+                    input: texts
+                })
+            });
+
+            if (!response.ok) {
+                const err = await response.text();
+                console.error(`Embedding API Error: ${response.status} ${err}`);
+                return [];
+            }
+
+            const json = await response.json();
+            // Extract embedding field
+            if (json.data && Array.isArray(json.data)) {
+                return json.data.map((item: any) => item.embedding);
+            }
+            return [];
+        } catch (e) {
+            console.error("Embedding generation failed:", e);
+            return [];
+        }
+    }
+}
 
 const model = new ChatDeepSeek({
     model: "deepseek-reasoner",
@@ -30,7 +79,11 @@ export async function POST(req: Request) {
 
                     console.log(`Extracted dish name: ${dishName}`);
 
-                    const collection = await chromaClient.getCollection({ name: "how-to-cook" });
+                    const embeddingFunction = new ZhipuEmbeddingFunction();
+                    const collection = await chromaClient.getCollection({ 
+                        name: "how-to-cook", 
+                        embeddingFunction: embeddingFunction 
+                    });
                     
                     // Try semantic search first (if embeddings exist)
                     let documents: (string | null)[] = [];
@@ -38,71 +91,32 @@ export async function POST(req: Request) {
                     try {
                         // We attempt query, but if it fails or returns nothing (due to missing embeddings), we fall back.
                         // Actually, query without embeddings in DB returns empty results usually.
+                        const queryEmbeddings = await embeddingFunction.generate([dishName]);
+                        console.log("Query embeddings:", queryEmbeddings);
                         const results = await collection.query({
-                            queryTexts: [lastMessage.content],
-                            nResults: 1
+                            queryEmbeddings: queryEmbeddings,
+                            nResults: 10
                         });
+                        console.log("Vector search results >>>>>>>>>>>:", results);
                         if (results.documents && results.documents.length > 0 && results.documents[0].length > 0) {
-                             documents = results.documents[0];
+                             const docs = results.documents[0];
+                             const metas = results.metadatas ? results.metadatas[0] : [];
+                             
+                             // Re-ranking: Prioritize document where relativePath contains dishName
+                             let bestIdx = 0;
+                             if (dishName) {
+                                 const matchIdx = metas.findIndex(m => 
+                                     m && typeof m.relativePath === 'string' && m.relativePath.toLowerCase().includes(dishName.toLowerCase())
+                                 );
+                                 if (matchIdx !== -1) {
+                                     console.log(`Re-ranking: Promoted index ${matchIdx} (${metas[matchIdx].relativePath}) due to keyword match.`);
+                                     bestIdx = matchIdx;
+                                 }
+                             }
+                             
+                             documents = [docs[bestIdx]];
                         }
                     } catch (err) {
-                        console.log("Vector search failed, trying keyword search...");
-                    }
-
-                    // Fallback to keyword search if vector search failed or returned nothing
-                    if ((!documents || documents.length === 0) && dishName) {
-                         // Enterprise Best Practice:
-                         // 1. Hybrid Search (Vector + BM25): Combine semantic search with keyword search.
-                         // 2. Re-ranking: Retrieve a larger set (e.g., 50 candidates) and use a Cross-Encoder to re-rank them.
-                         // 3. Metadata Filtering: Use metadata (like category, source) to narrow down scope before search.
-                         
-                         // Why not fetch ALL matches?
-                         // - Performance: Fetching thousands of documents consumes excessive memory and network bandwidth.
-                         // - Latency: Processing all documents to find the best match is slow.
-                         // - Scalability: Works for 100 recipes, fails for 1 million.
-                         
-                         // Current Strategy (Pragmatic Fallback):
-                         // Fetch top 20 matches containing the keyword, then sort by file path relevance in memory.
-                         // This is sufficient for a dataset of thousands of files.
-                         const getRes = await collection.get({
-                             where_document: { "$contains": dishName },
-                             limit: 20, 
-                             include: ["documents", "metadatas"]
-                         });
-                         
-                         if (getRes.documents && getRes.documents.length > 0) {
-                             // Filter results:
-                             // 1. Exclude README, CODE_OF_CONDUCT, etc.
-                             // 2. Prioritize files where source path ends with dish name (e.g., .../小龙虾/小龙虾.md)
-                             
-                             let candidates = getRes.documents.map((doc, idx) => ({
-                                 doc,
-                                 metadata: getRes.metadatas ? getRes.metadatas[idx] : null
-                             }));
-
-                             // Filter out common non-recipe files
-                             candidates = candidates.filter(c => {
-                                 const source = (c.metadata?.source as string) || "";
-                                 return !source.includes("README.md") && 
-                                        !source.includes("CODE_OF_CONDUCT.md") &&
-                                        !source.includes("CONTRIBUTING.md");
-                             });
-
-                             // Sort by relevance (file path match)
-                             candidates.sort((a, b) => {
-                                 const sourceA = (a.metadata?.source as string) || "";
-                                 const sourceB = (b.metadata?.source as string) || "";
-                                 
-                                 const scoreA = sourceA.includes(dishName) ? 1 : 0;
-                                 const scoreB = sourceB.includes(dishName) ? 1 : 0;
-                                 
-                                 return scoreB - scoreA;
-                             });
-
-                             if (candidates.length > 0 && candidates[0].doc) {
-                                 documents = [candidates[0].doc];
-                             }
-                         }
                     }
 
                     if (documents && documents.length > 0 && documents[0]) {
