@@ -42,6 +42,39 @@ export default function Home() {
 	const messagesEndRef = useRef<HTMLDivElement>(null);
 	const textareaRef = useRef<HTMLTextAreaElement>(null);
 	const abortControllerRef = useRef<AbortController | null>(null);
+	const [isLoaded, setIsLoaded] = useState(false);
+
+	// Load from LocalStorage
+	useEffect(() => {
+		const storedConversations = localStorage.getItem("apex-ai-conversations");
+		if (storedConversations) {
+			try {
+				const parsed = JSON.parse(storedConversations);
+				const restored = parsed.map((c: any) => ({
+					...c,
+					createdAt: new Date(c.createdAt),
+				}));
+
+				if (restored.length > 0) {
+					setConversations(restored);
+					const defaultExists = restored.some((c: any) => c.id === "1");
+					if (!defaultExists) {
+						setCurrentConversationId(restored[0].id);
+					}
+				}
+			} catch (error) {
+				console.error("Failed to load conversations:", error);
+			}
+		}
+		setIsLoaded(true);
+	}, []);
+
+	// Save to LocalStorage
+	useEffect(() => {
+		if (isLoaded) {
+			localStorage.setItem("apex-ai-conversations", JSON.stringify(conversations));
+		}
+	}, [conversations, isLoaded]);
 
 	const currentConversation = conversations.find((c) => c.id === currentConversationId);
 
@@ -220,7 +253,14 @@ export default function Home() {
 	const handleDeleteConversation = (id: string) => {
 		const updated = conversations.filter((c) => c.id !== id);
 		if (updated.length === 0) {
-			handleNewConversation();
+			const newConversation: Conversation = {
+				id: Date.now().toString(),
+				title: "新对话",
+				messages: [],
+				createdAt: new Date(),
+			};
+			setConversations([newConversation]);
+			setCurrentConversationId(newConversation.id);
 			return;
 		}
 		setConversations(updated);
