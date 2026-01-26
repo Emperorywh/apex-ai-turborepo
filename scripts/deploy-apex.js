@@ -213,6 +213,25 @@ const readmeContent = `
    node apps/apex-ai/server.js
 
 Note: This folder was generated for Linux deployment. Do not run it on Windows without reinstalling dependencies.
+
+-------------------------------------------------------------------------------
+Troubleshooting "Typewriter Effect" / Streaming Issues
+-------------------------------------------------------------------------------
+If you find that the AI response comes all at once instead of streaming (typewriter effect),
+it is likely due to Nginx buffering.
+
+1. Ensure the application code sends 'X-Accel-Buffering: no' header (already included in this build).
+2. If that doesn't work, add the following to your Nginx configuration in Baota/Pagoda Panel:
+
+   location /api/ {
+       proxy_pass http://127.0.0.1:3000;
+       proxy_buffering off;
+       proxy_cache off;
+       chunked_transfer_encoding on;
+   }
+
+   Or globally in the server block:
+   proxy_buffering off;
 `;
 fs.writeFileSync(path.join(DIST_DIR, 'README.txt'), readmeContent);
 

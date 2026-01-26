@@ -30,7 +30,13 @@ export async function POST(req: Request) {
                             controller.enqueue(encoder.encode("抱歉，我没有找到相关的菜谱。"));
                             controller.close();
                         }
-                    }), { headers: { "Content-Type": "text/plain; charset=utf-8" } });
+                    }), { 
+                        headers: { 
+                            "Content-Type": "text/plain; charset=utf-8",
+                            "Cache-Control": "no-cache, no-transform",
+                            "X-Accel-Buffering": "no"
+                        } 
+                    });
                 }
             }
         }
@@ -100,6 +106,8 @@ export async function POST(req: Request) {
             headers: {
                 "Content-Type": "text/plain; charset=utf-8",
                 "Transfer-Encoding": "chunked",
+                "Cache-Control": "no-cache, no-transform",
+                "X-Accel-Buffering": "no"
             },
         });
 
