@@ -4,8 +4,9 @@
   "scripts": {
     "build": "turbo run build",
     "dev": "turbo run dev",
-    "lint": "turbo run lint",
+    "lint": "turbo lint",
     "format": "prettier --write \"**/*.{ts,tsx,md}\"",
+    "deploy:apex-ai": "node scripts/deploy-apex.js",
     "check-types": "turbo run check-types",
     "prepare": "husky"
   },
