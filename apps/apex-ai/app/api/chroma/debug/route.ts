@@ -10,7 +10,7 @@ export async function GET(req: NextRequest) {
         
         if (query) {
              const results = await collection.get({
-                 where_document: { "$contains": query },
+                 whereDocument: { "$contains": query },
                  limit: 3,
                  include: ["documents", "metadatas", "embeddings"] as any
              });

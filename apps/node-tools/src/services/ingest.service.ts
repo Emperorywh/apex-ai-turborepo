@@ -14,7 +14,7 @@ class ZhipuEmbeddings extends Embeddings {
     private batchSize: number;
 
     constructor(params: { apiKey: string, model: string, batchSize?: number }) {
-        super(params);
+        super({});
         this.apiKey = params.apiKey;
         this.model = params.model;
         this.batchSize = params.batchSize || 64;
@@ -178,11 +178,15 @@ export async function ingestHowToCook() {
     try {
         // Test embedding generation
         const [testEmbedding] = await embeddings.embedDocuments(["test"]);
-        console.log(`🧪 Test Embedding Generation:`);
-        console.log(`   - Dimension: ${testEmbedding.length}`);
-        console.log(`   - Sample (first 5): ${JSON.stringify(testEmbedding.slice(0, 5))}`);
+        if (testEmbedding) {
+            console.log(`🧪 Test Embedding Generation:`);
+            console.log(`   - Dimension: ${testEmbedding.length}`);
+            console.log(`   - Sample (first 5): ${JSON.stringify(testEmbedding.slice(0, 5))}`);
+        } else {
+             console.warn("⚠️ Test embedding generation returned no result.");
+        }
         
-        // Optimization: Do not retry if the initial connection fails. 
+        // Optimization: Do not retry if the initial connection fails.  
         // If the DB is down or unreachable, fail fast.
         await vectorStore.ensureCollection();
     } catch (e) {
