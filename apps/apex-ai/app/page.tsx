@@ -19,6 +19,26 @@ interface Conversation {
 	createdAt: Date;
 }
 
+const WELCOME_MESSAGE = `你好！我是 **Apex AI** 👋
+
+我已接入 **DeepSeek** 大模型，并配合 **RAG** 技术，能够基于菜谱库为您回答。
+
+💡 **您可以询问：**
+> *“小龙虾怎么做？”*
+
+---
+
+### 🍽️ 支持的菜谱
+
+**🍤 虾类**
+小龙虾、干煎阿根廷红虾、油焖大虾、白灼虾、芥末黄油罗氏虾、蒜蓉虾、蒜香黄油虾、黄油煎虾
+
+**🐟 鱼类**
+混合烤鱼、清蒸鲈鱼、糖醋鲤鱼、葱油桂鱼、香煎翘嘴鱼、鲤鱼炖白菜、鳊鱼炖豆腐、微波葱姜黑鳕鱼、水煮鱼、红烧鱼、红烧鱼头、红烧鲤鱼、响油鳝丝
+
+**🦀 蟹贝及其他**
+葱烧海参、蛏抱蛋、咖喱炒蟹、肉蟹煲、酱炖蟹、清蒸生蚝`;
+
 export default function Home() {
 	const [conversations, setConversations] = useState<Conversation[]>([
 		{
@@ -28,7 +48,7 @@ export default function Home() {
 				{
 					id: "welcome",
 					role: "assistant",
-					content: "你好！我是 Apex AI。准备好探索未知的领域了吗？",
+					content: WELCOME_MESSAGE,
 				},
 			],
 			createdAt: new Date(),
@@ -241,8 +261,14 @@ export default function Home() {
 	const handleNewConversation = () => {
 		const newConversation: Conversation = {
 			id: Date.now().toString(),
-			title: "新对话",
-			messages: [],
+			title: "欢迎对话",
+			messages: [
+				{
+					id: Date.now().toString() + "-welcome",
+					role: "assistant",
+					content: WELCOME_MESSAGE,
+				},
+			],
 			createdAt: new Date(),
 		};
 		setConversations([newConversation, ...conversations]);
@@ -255,8 +281,14 @@ export default function Home() {
 		if (updated.length === 0) {
 			const newConversation: Conversation = {
 				id: Date.now().toString(),
-				title: "新对话",
-				messages: [],
+				title: "欢迎对话",
+				messages: [
+					{
+						id: Date.now().toString() + "-welcome",
+						role: "assistant",
+						content: WELCOME_MESSAGE,
+					},
+				],
 				createdAt: new Date(),
 			};
 			setConversations([newConversation]);
@@ -402,117 +434,117 @@ export default function Home() {
 								</p>
 							</div>
 						) : (
-								currentConversation?.messages.map((msg) => {
-									const role = msg.role;
-									
-									let thoughtProcess = null;
-									let displayContent = msg.content;
+							currentConversation?.messages.map((msg) => {
+								const role = msg.role;
 
-									if (role === "assistant") {
-										const thinkMatch = /<think>([\s\S]*?)(?:<\/think>|$)/.exec(msg.content);
-										if (thinkMatch) {
-											thoughtProcess = thinkMatch[1];
-											displayContent = msg.content.replace(/<think>[\s\S]*?(?:<\/think>|$)/, "").trim();
-										}
+								let thoughtProcess = null;
+								let displayContent = msg.content;
+
+								if (role === "assistant") {
+									const thinkMatch = /<think>([\s\S]*?)(?:<\/think>|$)/.exec(msg.content);
+									if (thinkMatch) {
+										thoughtProcess = thinkMatch[1];
+										displayContent = msg.content.replace(/<think>[\s\S]*?(?:<\/think>|$)/, "").trim();
 									}
+								}
 
-									return (
-										<div
-											key={msg.id}
-											className={`flex gap-4 ${role === "user" ? "justify-end" : "justify-start"} animate-in fade-in slide-in-from-bottom-2 duration-300`}
-										>
-											{role === "assistant" && (
-												<div className="w-8 h-8 rounded-lg bg-white flex-shrink-0 flex items-center justify-center text-black font-bold text-xs mt-1 shadow-[0_0_10px_rgba(255,255,255,0.2)]">
-													A
-												</div>
-											)}
+								return (
+									<div
+										key={msg.id}
+										className={`flex gap-4 ${role === "user" ? "justify-end" : "justify-start"} animate-in fade-in slide-in-from-bottom-2 duration-300`}
+									>
+										{role === "assistant" && (
+											<div className="w-8 h-8 rounded-lg bg-white flex-shrink-0 flex items-center justify-center text-black font-bold text-xs mt-1 shadow-[0_0_10px_rgba(255,255,255,0.2)]">
+												A
+											</div>
+										)}
 
-											<div className={`
+										<div className={`
 											max-w-[85%] md:max-w-[75%] rounded-2xl px-5 py-3.5 text-[15px] leading-relaxed
 											${role === "user"
-													? "bg-neutral-800 text-white rounded-br-none border border-neutral-700"
-													: "bg-transparent text-neutral-200 px-0 md:px-0" // Minimalist style for AI
-												}
+												? "bg-neutral-800 text-white rounded-br-none border border-neutral-700"
+												: "bg-transparent text-neutral-200 px-0 md:px-0" // Minimalist style for AI
+											}
 										`}>
-												{role === "assistant" ? (
-													<div className="prose prose-invert max-w-none">
-														{thoughtProcess && (
-															<div className="mb-4">
-																<details className="group border-l-2 border-neutral-700 pl-4 ml-1" open>
-																	<summary className="text-xs font-mono text-neutral-500 cursor-pointer select-none hover:text-neutral-300 flex items-center gap-2 outline-none">
-																		<svg className="w-3 h-3 transition-transform group-open:rotate-90" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-																			<path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
-																		</svg>
-																		<span>Thinking Process</span>
-																	</summary>
-																	<div className="mt-2 text-sm text-neutral-400 font-mono whitespace-pre-wrap leading-relaxed bg-neutral-900/50 p-3 rounded-md border border-neutral-800">
-																		{thoughtProcess}
-																		{!msg.content.includes("</think>") && (
-																			<span className="inline-block w-1.5 h-3 ml-1 bg-neutral-500 animate-pulse"/>
-																		)}
-																	</div>
-																</details>
-															</div>
-														)}
-														{displayContent && (
-															<ReactMarkdown
-																remarkPlugins={[remarkGfm]}
-																components={{
-															code({ node, inline, className, children, ...props }: any) {
-																const match = /language-(\w+)/.exec(className || "");
-																return !inline && match ? (
-																	<div className="rounded-lg overflow-hidden my-4 border border-neutral-800">
-																		<div className="bg-neutral-900 px-4 py-2 flex items-center justify-between border-b border-neutral-800">
-																			<span className="text-xs text-neutral-400 font-mono">{match[1]}</span>
+											{role === "assistant" ? (
+												<div className="prose prose-invert max-w-none">
+													{thoughtProcess && (
+														<div className="mb-4">
+															<details className="group border-l-2 border-neutral-700 pl-4 ml-1" open>
+																<summary className="text-xs font-mono text-neutral-500 cursor-pointer select-none hover:text-neutral-300 flex items-center gap-2 outline-none">
+																	<svg className="w-3 h-3 transition-transform group-open:rotate-90" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+																		<path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
+																	</svg>
+																	<span>Thinking Process</span>
+																</summary>
+																<div className="mt-2 text-sm text-neutral-400 font-mono whitespace-pre-wrap leading-relaxed bg-neutral-900/50 p-3 rounded-md border border-neutral-800">
+																	{thoughtProcess}
+																	{!msg.content.includes("</think>") && (
+																		<span className="inline-block w-1.5 h-3 ml-1 bg-neutral-500 animate-pulse" />
+																	)}
+																</div>
+															</details>
+														</div>
+													)}
+													{displayContent && (
+														<ReactMarkdown
+															remarkPlugins={[remarkGfm]}
+															components={{
+																code({ node, inline, className, children, ...props }: any) {
+																	const match = /language-(\w+)/.exec(className || "");
+																	return !inline && match ? (
+																		<div className="rounded-lg overflow-hidden my-4 border border-neutral-800">
+																			<div className="bg-neutral-900 px-4 py-2 flex items-center justify-between border-b border-neutral-800">
+																				<span className="text-xs text-neutral-400 font-mono">{match[1]}</span>
+																			</div>
+																			<SyntaxHighlighter
+																				{...props}
+																				style={vscDarkPlus}
+																				language={match[1]}
+																				PreTag="div"
+																				customStyle={{ margin: 0, padding: '1rem', background: 'transparent' }}
+																			>
+																				{String(children).replace(/\n$/, "")}
+																			</SyntaxHighlighter>
 																		</div>
-																		<SyntaxHighlighter
-																			{...props}
-																			style={vscDarkPlus}
-																			language={match[1]}
-																			PreTag="div"
-																			customStyle={{ margin: 0, padding: '1rem', background: 'transparent' }}
-																		>
-																			{String(children).replace(/\n$/, "")}
-																		</SyntaxHighlighter>
-																	</div>
-																) : (
-																	<code {...props} className={`${className} bg-neutral-800/50 px-1.5 py-0.5 rounded text-sm font-mono text-blue-300`}>
-																		{children}
-																	</code>
-																);
-															},
-															table({ children }) {
-																return (
-																	<div className="overflow-x-auto my-4 border border-neutral-800 rounded-lg">
-																		<table className="min-w-full divide-y divide-neutral-800">
+																	) : (
+																		<code {...props} className={`${className} bg-neutral-800/50 px-1.5 py-0.5 rounded text-sm font-mono text-blue-300`}>
 																			{children}
-																		</table>
-																	</div>
-																);
-															},
-															thead({ children }) {
-																return <thead className="bg-neutral-900">{children}</thead>;
-															},
-															th({ children }) {
-																return <th className="px-6 py-3 text-left text-xs font-medium text-neutral-400 uppercase tracking-wider">{children}</th>;
-															},
-															td({ children }) {
-																return <td className="px-6 py-4 whitespace-nowrap text-sm text-neutral-300 border-t border-neutral-800">{children}</td>;
-															},
-															a({ href, children }) {
-																return <a href={href} target="_blank" rel="noopener noreferrer" className="text-blue-400 hover:text-blue-300 hover:underline">{children}</a>;
-															},
-															ul({ children }) {
-																return <ul className="list-disc list-outside ml-4 space-y-1">{children}</ul>;
-															},
-															ol({ children }) {
-																return <ol className="list-decimal list-outside ml-4 space-y-1">{children}</ol>;
-															}
-														}}
-													>
-														{displayContent}
-													</ReactMarkdown>
-														)}
+																		</code>
+																	);
+																},
+																table({ children }) {
+																	return (
+																		<div className="overflow-x-auto my-4 border border-neutral-800 rounded-lg">
+																			<table className="min-w-full divide-y divide-neutral-800">
+																				{children}
+																			</table>
+																		</div>
+																	);
+																},
+																thead({ children }) {
+																	return <thead className="bg-neutral-900">{children}</thead>;
+																},
+																th({ children }) {
+																	return <th className="px-6 py-3 text-left text-xs font-medium text-neutral-400 uppercase tracking-wider">{children}</th>;
+																},
+																td({ children }) {
+																	return <td className="px-6 py-4 whitespace-nowrap text-sm text-neutral-300 border-t border-neutral-800">{children}</td>;
+																},
+																a({ href, children }) {
+																	return <a href={href} target="_blank" rel="noopener noreferrer" className="text-blue-400 hover:text-blue-300 hover:underline">{children}</a>;
+																},
+																ul({ children }) {
+																	return <ul className="list-disc list-outside ml-4 space-y-1">{children}</ul>;
+																},
+																ol({ children }) {
+																	return <ol className="list-decimal list-outside ml-4 space-y-1">{children}</ol>;
+																}
+															}}
+														>
+															{displayContent}
+														</ReactMarkdown>
+													)}
 												</div>
 											) : (
 												<p className="whitespace-pre-wrap">{msg.content}</p>
