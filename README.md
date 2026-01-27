@@ -1,121 +1,101 @@
 # Apex AI Turborepo
 
-This is the official monorepo for Apex AI, built with [Turborepo](https://turbo.build/repo).
+这是 Apex AI 的官方单体仓库，使用 [Turborepo](https://turbo.build/repo) 构建。
 
-## What's inside?
+## 包含内容
 
-This Turborepo includes the following packages/apps:
+本仓库包含以下应用和包：
 
-### Apps and Packages
+### 应用和包 (Apps and Packages)
 
-- `apps/apex-ai`: The main Apex AI application (Next.js)
-- `apps/docs`: Documentation site (Next.js)
-- `apps/web`: Web application (Next.js)
-- `packages/ui`: Shared React component library (`@repo/ui`)
-- `packages/eslint-config`: Shared ESLint configurations (`@repo/eslint-config`)
-- `packages/typescript-config`: Shared TypeScript configurations (`@repo/typescript-config`)
+- `apps/apex-ai`: 主要的 Apex AI 应用程序 (Next.js)。一个集成了 ChromaDB、LangChain 和 LLM (OpenAI/DeepSeek) 的 RAG 聊天应用，用于智能问答。
+- `apps/node-tools`: 后端工具服务 (Express/Node.js)。处理数据摄取任务，例如处理 [HowToCook](https://github.com/Anduin2017/HowToCook) 仓库的食谱并将其索引到 ChromaDB 中。
+- `apps/docs`: 文档站点 (Next.js)。
+- `apps/web`: Web 应用程序 (Next.js)。
+- `packages/ui`: 共享 React 组件库 (`@repo/ui`)。
+- `packages/eslint-config`: 共享 ESLint 配置 (`@repo/eslint-config`)。
+- `packages/typescript-config`: 共享 TypeScript 配置 (`@repo/typescript-config`)。
 
-## Git Commit Convention
+## Git 提交规范 (Git Commit Convention)
 
-We follow the [Conventional Commits](https://www.conventionalcommits.org/) specification.
-Our commit messages are linted by `commitlint` with a custom configuration that dynamically checks scopes against our directory structure.
+我们遵循 [Conventional Commits](https://www.conventionalcommits.org/) 规范。
+我们的提交信息会通过 `commitlint` 进行检查，并使用自定义配置动态验证 scope 是否符合目录结构。
 
-### Format
+### 格式
 
 ```text
 <type>(<scope>): <subject>
 ```
 
-> **Note**: Scope is **mandatory** in this repository.
+> **注意**: 本仓库**强制要求**填写 Scope。
 
-### Types
+### 类型 (Types)
 
-- `feat`: A new feature
-- `fix`: A bug fix
-- `docs`: Documentation only changes
-- `style`: Changes that do not affect the meaning of the code (white-space, formatting, etc)
-- `refactor`: A code change that neither fixes a bug nor adds a feature
-- `perf`: A code change that improves performance
-- `test`: Adding missing tests or correcting existing tests
-- `build`: Changes that affect the build system or external dependencies
-- `ci`: Changes to our CI configuration files and scripts
-- `chore`: Other changes that don't modify src or test files
-- `revert`: Reverts a previous commit
+- `feat`: 新功能 (A new feature)
+- `fix`: Bug 修复 (A bug fix)
+- `docs`: 仅文档变更 (Documentation only changes)
+- `style`: 不影响代码含义的变更 (空格, 格式化等)
+- `refactor`: 既不是修复 Bug 也不是添加功能的代码更改 (重构)
+- `perf`: 提高性能的代码更改
+- `test`: 添加缺失的测试或更正现有的测试
+- `build`: 影响构建系统或外部依赖关系的更改
+- `ci`: 对 CI 配置文件和脚本的更改
+- `chore`: 其他不修改 src 或测试文件的更改
+- `revert`: 撤销之前的提交
 
-### Scopes
+### 范围 (Scopes)
 
-The scope must be one of the directories in `apps/` or `packages/`, or `repo` for root-level changes.
-Current valid scopes include:
+Scope 必须是 `apps/` 或 `packages/` 目录下的目录名，或者是用于根目录变更的 `repo`。
+当前有效的 scope 包括：
 
 - `apex-ai`
+- `node-tools`
 - `docs`
 - `web`
 - `ui`
 - `eslint-config`
 - `typescript-config`
-- `repo` (use this for changes to the root `package.json`, `turbo.json`, etc.)
+- `repo` (用于根目录 `package.json`, `turbo.json` 等的变更)
 
-**Note**: The list of scopes is dynamically generated from the file system in `commitlint.config.js`. If you add a new app or package, it automatically becomes a valid scope.
+**注意**: Scope 列表是根据文件系统在 `commitlint.config.js` 中动态生成的。如果你添加了新的应用或包，它会自动成为有效的 scope。
 
-### Examples
+### 示例
 
-✅ **Good:**
+✅ **正确:**
 ```bash
 feat(apex-ai): add new chat component
-fix(ui): correct button padding
+fix(node-tools): fix ingestion error
 docs(repo): update readme with commit convention
 chore(eslint-config): update rules
 ```
 
-❌ **Bad:**
+❌ **错误:**
 ```bash
-feat: add new chat component (missing scope)
-fix(unknown): correct button padding (invalid scope)
-update readme (invalid format)
+feat: add new chat component (缺少 scope)
+fix(unknown): correct button padding (无效的 scope)
+update readme (格式错误)
 ```
 
-## Development
+## 开发 (Development)
 
-### Install Dependencies
+### 安装依赖
 
 ```bash
 pnpm install
 ```
 
-### Build
+### 构建
 
-To build all apps and packages, run the following command:
+运行以下命令构建所有应用和包：
 
 ```bash
 pnpm build
 ```
 
-### Develop
+### 开发模式
 
-To develop all apps and packages, run the following command:
+运行以下命令启动所有应用和包的开发模式：
 
 ```bash
 pnpm dev
 ```
-
-### Remote Caching
-
-Turborepo can use a technique known as [Remote Caching](https://turborepo.com/docs/core-concepts/remote-caching) to share cache artifacts across machines, enabling you to share build caches with your team and CI/CD pipelines.
-
-By default, Turborepo will cache locally. To enable Remote Caching you will need an account with Vercel. If you don't have an account you can [create one](https://vercel.com/signup?utm_source=turborepo-examples), then enter the following commands:
-
-```bash
-pnpm turbo login
-pnpm turbo link
-```
-
-## Useful Links
-
-Learn more about the power of Turborepo:
-
-- [Tasks](https://turborepo.com/docs/crafting-your-repository/running-tasks)
-- [Caching](https://turborepo.com/docs/crafting-your-repository/caching)
-- [Remote Caching](https://turborepo.com/docs/core-concepts/remote-caching)
-- [Filtering](https://turborepo.com/docs/crafting-your-repository/running-tasks#using-filters)
-- [Configuration Options](https://turborepo.com/docs/reference/configuration)
-- [CLI Usage](https://turborepo.com/docs/reference/command-line-reference)
