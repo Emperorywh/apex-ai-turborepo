@@ -8,7 +8,7 @@
 
 ### 应用和包 (Apps and Packages)
 
-- `apps/apex-ai`: 主要的 Apex AI 应用程序 (Next.js)。一个集成了 ChromaDB、LangChain 和 LLM (OpenAI/DeepSeek) 的 RAG 聊天应用，用于智能问答。
+- `apps/apex-ai`: 主要的 Apex AI 应用程序 (Next.js)。一个集成了 ChromaDB、LangChain 和 LLM (OpenAI/DeepSeek) 的 RAG 聊天应用，用于智能问答。在线地址：https://ai.imywh.com
 - `apps/node-tools`: 后端工具服务 (Express/Node.js)。处理数据摄取任务，例如处理 [HowToCook](https://github.com/Anduin2017/HowToCook) 仓库的食谱并将其索引到 ChromaDB 中。
 - `apps/docs`: 文档站点 (Next.js)。
 - `apps/web`: Web 应用程序 (Next.js)。
